@@ -123,9 +123,12 @@ export function RecentlyRoasted() {
         const roasts = data.roasts
         if (!roasts || roasts.length < 2) return
 
-        const mid = Math.ceil(roasts.length / 2)
-        setRowOne(roasts.slice(0, mid))
-        setRowTwo(roasts.slice(mid))
+        const filtered = roasts.filter((r) => r.verdict && r.verdict.trim().length > 0)
+        if (filtered.length < 2) return
+
+        const mid = Math.ceil(filtered.length / 2)
+        setRowOne(filtered.slice(0, mid))
+        setRowTwo(filtered.slice(mid))
       })
       .catch(() => {
         // optionally handle error
