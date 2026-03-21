@@ -205,6 +205,14 @@ app.post('/roast', requireAllowedOrigin, async (req, res) => {
       return res.status(400).json({ error: 'Missing or invalid repo_summary or profanity flag' });
     }
 
+    if (typeof repo_summary.name === 'string' && repo_summary.name.trim().toLowerCase() === 'reporoast') {
+      return res.status(400).json({ error: 'RepoRoast is too perfect to roast. Please choose another repo' });
+    }
+
+    if (typeof repo_summary.owner === 'string' && repo_summary.owner.trim().toLowerCase() === 'hkhan701') {
+      return res.status(400).json({ error: "Did you really think I'd let you roast my personal repos? Try someone else's code, coward" });
+    }
+
     const repoUrl = `github.com/${repo_summary.owner}/${repo_summary.name}`;
 
     // Check cache first and return normal JSON response
