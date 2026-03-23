@@ -167,7 +167,7 @@ function buildCompactPrompt(s) {
   if (s.description) lines.push(`DESCRIPTION: ${s.description}`);
   if (s.languages?.length) lines.push(`LANGUAGES: ${s.languages.join(', ')}`);
   lines.push(`Stars: ${s.stars} | Forks: ${s.forks} | Issues: ${s.open_issues} | Contributors: ${s.contributor_count}`);
-  lines.push(`Created: ${(s.created_at ?? '').slice(0, 10)} | Last push: ${(s.last_pushed_at ?? '').slice(0, 10)} | Today: ${(s.current_date ?? '').slice(0, 10)}`);
+  lines.push(`Created: ${(s.created_at ?? '').slice(0, 10)} | Last push: ${(s.last_pushed_at ?? '').slice(0, 10)} | Current date (authoritative): ${(s.current_date ?? '').slice(0, 10)}`);
   if (s.license_name) lines.push(`License: ${s.license_name}`);
   if (s.fork) lines.push('Fork: yes');
   if (s.is_archived) lines.push('Archived: yes');
