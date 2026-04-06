@@ -2,9 +2,9 @@
 // src/utils/github.ts
 // Client-side GitHub API calls (uses user's IP, no auth needed for public repos)
 
-import { grabFileTreeAndImportantFileContents, type FileContent } from "./filetree";
-import { githubFetch, type GitHubFetchError } from "./github-fetch";
-import { MAX_README_CHARS } from "./constants";
+import { grabFileTreeAndImportantFileContents, type FileContent } from "@/lib/filetree";
+import { githubFetch, type GitHubFetchError } from "@/lib/github-fetch";
+import { MAX_README_CHARS, REPO_ROAST_SERVER_URL } from "@/lib/constants";
 
 export type { GitHubFetchError };
 
@@ -52,10 +52,9 @@ export async function checkRoastCache(
   repo: string,
   profanity: boolean
 ): Promise<CachedRoastHit | null> {
-  const serverUrl = process.env.NEXT_PUBLIC_REPO_ROAST_SERVER_URL ?? "http://localhost:5000";
   try {
     const params = new URLSearchParams({ owner, repo, profanity: String(profanity) });
-    const res = await fetch(`${serverUrl}/roast-check?${params}`);
+    const res = await fetch(`${REPO_ROAST_SERVER_URL}/roast-check?${params}`);
     if (!res.ok) return null;
     const data = await res.json();
     if (data.cached) return { roast: data.roast, verdict: data.verdict, cached: true };
@@ -99,9 +98,8 @@ export async function fetchRoast(
   repoSummary: RepoSummary,
   profanity: boolean
 ): Promise<RoastResult | GitHubFetchError> {
-  const serverUrl = process.env.NEXT_PUBLIC_REPO_ROAST_SERVER_URL ?? "http://localhost:5000";
   try {
-    const res = await fetch(`${serverUrl}/roast`, {
+    const res = await fetch(`${REPO_ROAST_SERVER_URL}/roast`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ repo_summary: repoSummary, profanity }),
@@ -118,10 +116,8 @@ export async function streamRoast(
   profanity: boolean,
   onChunk: (result: RoastStreamResult) => void
 ): Promise<GitHubFetchError | void> {
-  const serverUrl = process.env.NEXT_PUBLIC_REPO_ROAST_SERVER_URL ?? "http://localhost:5000";
-
   try {
-    const res = await fetch(`${serverUrl}/roast`, {
+    const res = await fetch(`${REPO_ROAST_SERVER_URL}/roast`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

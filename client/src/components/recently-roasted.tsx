@@ -6,6 +6,7 @@ import { Facehash } from "facehash"
 import { cn } from "@/lib/utils"
 import { Marquee } from "@/components/ui/marquee"
 import { parseGitHubUrl } from "@/lib/github"
+import { REPO_ROAST_SERVER_URL } from "@/lib/constants"
 
 interface RoastedRepo {
   domain: string
@@ -21,10 +22,6 @@ const AVATAR_BG_COLORS = [
   "bg-skyblue",
   "bg-peachglow",
 ]
-
-const SERVER_URL = (
-  process.env.NEXT_PUBLIC_REPO_ROAST_SERVER_URL ?? "http://localhost:5000"
-).replace(/\/$/, "")
 
 let lastColor: string | null = null
 function getRandomColor(colors: string[]) {
@@ -117,7 +114,7 @@ export function RecentlyRoasted() {
   }
 
   useEffect(() => {
-    fetch(`${SERVER_URL}/recent-roasts`)
+    fetch(`${REPO_ROAST_SERVER_URL}/recent-roasts`)
       .then((r) => r.json())
       .then((data: { roasts: RoastedRepo[] }) => {
         const roasts = data.roasts

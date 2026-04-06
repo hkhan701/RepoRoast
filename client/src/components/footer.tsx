@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Skull } from "lucide-react"
-import { GithubIcon } from "./ui/github";
+import { GithubIcon } from "@/components/lucide-animated-icons/github";
 
 export function Footer() {
   const skullRef = useRef<SVGSVGElement | null>(null)

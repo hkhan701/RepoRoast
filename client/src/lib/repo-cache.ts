@@ -1,7 +1,7 @@
 // Simple in-memory cache for pre-fetched repo summaries.
 // The hero page writes here before navigating; the roast page reads on mount.
 
-import type { RepoSummary } from "./github";
+import type { RepoSummary } from "@/lib/github";
 
 const cache = new Map<string, RepoSummary>();
 

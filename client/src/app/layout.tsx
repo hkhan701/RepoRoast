@@ -41,8 +41,8 @@ export default function RootLayout({
         <RecentlyRoasted />
         <Footer />
         <Toaster />
+        <Analytics />
       </body>
-      <Analytics />
     </html>
   )
 }

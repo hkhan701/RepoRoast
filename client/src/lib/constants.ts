@@ -1,6 +1,5 @@
 export const MAX_FILES_TO_RETURN = 7;
 export const MAX_FILE_CONTENT_CHARS = 3000; // per file, ~750 tokens
-export const MAX_TREE_ENTRIES = 300;
 export const MAX_README_CHARS = 2000;
 
 // Directories and patterns to strip from the tree before anything else.
@@ -61,3 +60,8 @@ export const NOISE_EXACT_FILES = new Set([
   ".DS_Store",
   "Thumbs.db",
 ]);
+
+export const REPO_ROAST_SERVER_URL = (
+  process.env.NEXT_PUBLIC_REPO_ROAST_SERVER_URL ?? "http://localhost:5000"
+).replace(/\/$/, "");
+

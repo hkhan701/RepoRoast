@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { Facehash } from "facehash"
-import CountUp from "./ui/count-up"
+import CountUp from "@/components/ui/count-up"
+import { REPO_ROAST_SERVER_URL } from "@/lib/constants"
 
 const AVATAR_NAMES = [
   "agent-47",
@@ -21,14 +22,12 @@ const AVATAR_BG_COLORS = [
   "bg-rosecoral", "bg-skyblue", "bg-peachglow", "bg-mint", "bg-hotpink",
 ]
 
-const SERVER_URL = (process.env.NEXT_PUBLIC_REPO_ROAST_SERVER_URL ?? "http://localhost:5000").replace(/\/$/, "")
-
 export function AvatarStrip() {
   const [visibleAvatars, setVisibleAvatars] = useState(0)
   const [roastCount, setRoastCount] = useState(0)
 
   useEffect(() => {
-    fetch(`${SERVER_URL}/roast-count`)
+    fetch(`${REPO_ROAST_SERVER_URL}/roast-count`)
       .then((r) => r.json())
       .then((data) => setRoastCount(data.count ?? 31415))
       .catch(() => {/* leave null, will show fallback */ })

@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { githubFetch } from "./github-fetch";
+import { githubFetch } from "@/lib/github-fetch";
 import {
   MAX_FILES_TO_RETURN,
   MAX_FILE_CONTENT_CHARS,
   NOISE_DIR_PREFIXES,
   NOISE_FILE_EXTENSIONS,
   NOISE_EXACT_FILES,
-} from "./constants";
+  REPO_ROAST_SERVER_URL
+} from "@/lib/constants";
 
 // ------------------------------------------------------------------ //
 // Types
@@ -95,9 +96,7 @@ async function fetchFileTree(
 async function pickImportantFiles(
   filteredPaths: string[]
 ): Promise<MistralFileSelection> {
-  const serverUrl = process.env.NEXT_PUBLIC_REPO_ROAST_SERVER_URL ?? "http://localhost:5000";
-
-  const res = await fetch(`${serverUrl}/pick-files`, {
+  const res = await fetch(`${REPO_ROAST_SERVER_URL}/pick-files`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ paths: filteredPaths }),

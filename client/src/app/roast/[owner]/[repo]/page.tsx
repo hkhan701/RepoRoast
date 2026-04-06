@@ -7,8 +7,8 @@ import { popCachedSummary } from "@/lib/repo-cache"
 import { toast } from "@/components/ui/toaster"
 import { RoastingLoadingState } from "@/components/roasting-loading-state"
 import { ExternalLink, Share2 } from "lucide-react"
-import { ArrowLeftIcon } from "@/components/ui/arrow-left"
-import TextType from "@/components/TextType"
+import { ArrowLeftIcon } from "@/components/lucide-animated-icons/arrow-left"
+import TextType from "@/components/ui/text-type"
 import Image from "next/image"
 
 export default function RoastPage() {

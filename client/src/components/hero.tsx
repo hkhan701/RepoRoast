@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { fetchRepoSummary, parseGitHubUrl, checkRoastCache, type RepoSummary, type CachedRoastHit } from "@/lib/github"
 import { setCachedSummary } from "@/lib/repo-cache"
-import { AvatarStrip } from "./avatar-strip"
-import { SampleRepos } from "./sample-repos"
+import { AvatarStrip } from "@/components/avatar-strip"
+import { SampleRepos } from "@/components/sample-repos"
 import { toast } from "@/components/ui/toaster"
 
 export function HeroSection() {
