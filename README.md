@@ -14,7 +14,7 @@ It is built to feel fast, merciless, and a little unhinged on purpose. The proje
 
 - 2.6k people have used it so far
 - 10,000+ website visits
-- 10M+ tokens used so far
+- 15M+ tokens burned so far
 
 ## How it works
 
