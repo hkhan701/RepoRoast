@@ -1,21 +1,19 @@
 import express from 'express';
 import * as dotenv from 'dotenv';
 import cors from 'cors';
-import { Mistral } from '@mistralai/mistralai';
 import { Redis } from '@upstash/redis';
 import { createStreamingParser } from 'llm-json-validator';
 
 import { roastPrompt, pickFilesPrompt } from './prompts.js';
+import { NvidiaProvider } from './nvidia-provider.js';
 
 dotenv.config();
 
-const mistralKeys = Object.entries(process.env)
-  .filter(([key]) => key.match(/^MISTRAL_API_KEY(_\d+)?$/))
+const nvidiaKeys = Object.entries(process.env)
+  .filter(([key]) => key.match(/^NVIDIA_API_KEY(_\d+)?$/))
   .map(([, value]) => value)
   .filter(Boolean);
 
-
-if (mistralKeys.length === 0) throw new Error('No Mistral API keys found');
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL ?? "",
@@ -64,42 +62,9 @@ async function checkPublicRepoExists(owner, repo) {
   }
 }
 
-async function getMistralClient() {
-  let idx = 0;
-  try {
-    idx = await redis.incr('mistral:key_index');
-  } catch { }
-  const key = mistralKeys[idx % mistralKeys.length];
-  return { client: new Mistral({ apiKey: key }), keyLabel: `${key.slice(0, 4)}...${key.slice(-4)}` };
-}
-
-async function mistralCallWithRetry(fn) {
-  const maxAttempts = mistralKeys.length * 2;
-  let lastError;
-  for (let i = 0; i < maxAttempts; i++) {
-    const { client, keyLabel } = await getMistralClient();
-    console.log(`[Attempt ${i + 1}/${maxAttempts}] Trying key: ${keyLabel}`);
-    try {
-      const result = await fn(client);
-      console.log(`[Attempt ${i + 1}/${maxAttempts}] Key ${keyLabel} succeeded`);
-      return result;
-    } catch (err) {
-      lastError = err;
-      const status = err?.statusCode ?? err?.status ?? err?.response?.status;
-      const msgHas429 = /429|rate.?limit/i.test(err?.message ?? '');
-      const msgHas402 = /402|payment/i.test(err?.message ?? '');
-      console.log(`[Attempt ${i + 1}/${maxAttempts}] Key ${keyLabel} failed (${status || err?.message?.slice(0, 60)})`);
-      if (status === 429 || status === 402 || msgHas429 || msgHas402) {
-        console.log(`[Attempt ${i + 1}/${maxAttempts}] Rate limited, retrying next key in 3s...`);
-        await new Promise(r => setTimeout(r, 1000));
-        continue;
-      }
-      throw err;
-    }
-  }
-  console.log(`All ${maxAttempts} attempts exhausted, no keys available`);
-  throw lastError;
-}
+const llm = new NvidiaProvider({ keys: nvidiaKeys });
+const roastModel = process.env.LLM_ROAST_MODEL ?? 'google/gemma-4-31b-it';
+const pickFilesModel = process.env.LLM_PICK_FILES_MODEL ?? 'google/gemma-4-31b-it';
 
 const app = express();
 
@@ -242,48 +207,39 @@ app.post('/roast', requireAllowedOrigin, async (req, res) => {
 
     let latest = { roast: '', verdict: '' };
 
-    await mistralCallWithRetry(async (client) => {
-      const stream = await client.chat.stream({
-        model: 'mistral-large-latest',
+    const parser = createStreamingParser({
+      returnParsedJson: false,
+      dummyValues: {
+        string: '',
+        number: 0,
+        boolean: false,
+        null: null,
+      },
+    });
+
+    for await (const textChunk of llm.stream({
+        model: roastModel,
         messages: [
           { role: 'system', content: roastPrompt(profanity) },
           { role: 'user', content: buildCompactPrompt(repo_summary) },
         ],
         responseFormat: { type: 'json_object' },
-      });
+      })) {
+      const balanced = parser.appendChunk(textChunk);
+      if (typeof balanced !== 'string') continue;
 
-      const parser = createStreamingParser({
-        returnParsedJson: false,
-        dummyValues: {
-          string: '',
-          number: 0,
-          boolean: false,
-          null: null,
-        },
-      });
+      const parsed = tryParseRoastJson(balanced, latest);
+      if (!parsed) continue;
 
-      latest = { roast: '', verdict: '' };
+      latest = parsed;
+      sendEvent('chunk', latest);
+    }
 
-      for await (const event of stream) {
-        const textChunk = extractTextFromStreamEvent(event);
-        if (!textChunk) continue;
-
-        const balanced = parser.appendChunk(textChunk);
-        if (typeof balanced !== 'string') continue;
-
-        const parsed = tryParseRoastJson(balanced, latest);
-        if (!parsed) continue;
-
-        latest = parsed;
-        sendEvent('chunk', latest);
-      }
-
-      const finalBalanced = parser.getCurrentData();
-      if (typeof finalBalanced === 'string') {
-        const finalParsed = tryParseRoastJson(finalBalanced, latest);
-        if (finalParsed) latest = finalParsed;
-      }
-    });
+    const finalBalanced = parser.getCurrentData();
+    if (typeof finalBalanced === 'string') {
+      const finalParsed = tryParseRoastJson(finalBalanced, latest);
+      if (finalParsed) latest = finalParsed;
+    }
 
     // Save to cache, push to recent list, increment counter (non-blocking)
     if (latest.roast) {
@@ -331,13 +287,13 @@ app.post('/pick-files', requireAllowedOrigin, async (req, res) => {
       return res.status(400).json({ error: 'Missing or invalid paths array' });
     }
 
-    const chatResponse = await mistralCallWithRetry(m => m.chat.complete({
-      model: 'mistral-small-latest',
+    const chatResponse = await llm.complete({
+      model: pickFilesModel,
       messages: [{ role: 'user', content: pickFilesPrompt(paths) }],
       responseFormat: { type: 'json_object' },
       temperature: 0,
       maxTokens: 512,
-    }));
+    });
 
     const result = JSON.parse(chatResponse.choices[0].message.content.trim());
     res.status(200).json(result);
@@ -450,42 +406,6 @@ async function getRoastCount() {
     console.warn('Redis get count error (non-fatal):', err?.message);
     return 0;
   }
-}
-
-function extractTextFromStreamEvent(event) {
-  const payload = event?.data ?? event;
-  const delta = payload?.choices?.[0]?.delta?.content;
-
-  if (typeof delta === 'string') {
-    return delta;
-  }
-
-  if (Array.isArray(delta)) {
-    return delta
-      .map((part) => {
-        if (typeof part === 'string') return part;
-        if (typeof part?.text === 'string') return part.text;
-        return '';
-      })
-      .join('');
-  }
-
-  const messageContent = payload?.choices?.[0]?.message?.content;
-  if (typeof messageContent === 'string') {
-    return messageContent;
-  }
-
-  if (Array.isArray(messageContent)) {
-    return messageContent
-      .map((part) => {
-        if (typeof part === 'string') return part;
-        if (typeof part?.text === 'string') return part.text;
-        return '';
-      })
-      .join('');
-  }
-
-  return '';
 }
 
 function tryParseRoastJson(raw, previous) {
